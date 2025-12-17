@@ -8,6 +8,8 @@ rq>=1.10.0
 redis>=4.5.0
 # image helper
 pillow>=9.0.0
+# Production WSGI server
+gunicorn>=20.1.0
 # Note: heavy optional ML packages (torch, easyocr, sentence-transformers)
 # have been moved to `requirements-optional.txt` to keep Docker image small.
 # Install them only when you need deep model inference on the same host.
