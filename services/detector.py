@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from .video import extract_frames
+from .face import detect_faces_in_frame, crop_face
 
 try:
     import torch
@@ -51,10 +52,23 @@ class Detector:
         scores = []
         for f in frames:
             try:
+                # attempt to crop face first (prefer largest face)
+                face_boxes = detect_faces_in_frame(f)
+                if face_boxes:
+                    # pick largest box
+                    face_boxes.sort(key=lambda b: (b[2]-b[0])*(b[3]-b[1]), reverse=True)
+                    crop = crop_face(f, face_boxes[0])
+                    if crop is not None:
+                        input_img = crop
+                    else:
+                        input_img = f
+                else:
+                    input_img = f
+
                 if TORCH_AVAILABLE and hasattr(self.model, 'eval') and not isinstance(self.model, MockDetector):
                     # User-provided model expected to accept tensors
                     import torch
-                    img = torch.from_numpy(f.astype('float32') / 255.0).permute(2,0,1).unsqueeze(0)
+                    img = torch.from_numpy(input_img.astype('float32') / 255.0).permute(2,0,1).unsqueeze(0)
                     with torch.no_grad():
                         out = self.model(img)
                     # Expect output in [0,1] fake probability
@@ -63,7 +77,7 @@ class Detector:
                     val = float(out.squeeze().item())
                     scores.append(max(0.0, min(100.0, val * 100.0)))
                 else:
-                    scores.append(self.model.predict_frame(f))
+                    scores.append(self.model.predict_frame(input_img))
             except Exception:
                 scores.append(self.model.predict_frame(f))
         return scores
