@@ -8,6 +8,7 @@ import json
 import hashlib
 from datetime import datetime, timedelta
 import random
+import requests
 
 from models.database import (
     add_content, add_analysis_result, add_spread_point,
@@ -264,16 +265,12 @@ def analyze_url(url, user_id=None):
     
     try:
         # URL'den içerik çek
-        import requests
         from bs4 import BeautifulSoup
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        
         soup = BeautifulSoup(response.text, 'lxml')
         
         # Başlık ve içerik çıkar
