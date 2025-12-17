@@ -1,8 +1,7 @@
-import os
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+from .database import get_connection
 
-DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "faketrace.db"))
 
 class User:
     def __init__(self, id, email, password_hash):
@@ -12,25 +11,27 @@ class User:
 
     @staticmethod
     def get_by_email(email):
-        conn = sqlite3.connect(DB_PATH)
-        row = conn.execute("SELECT id, email, password_hash FROM users WHERE email = ?", (email,)).fetchone()
-        conn.close()
-        if row:
-            return User(*row)
-        return None
+        conn = get_connection()
+        try:
+            row = conn.execute("SELECT id, email, password_hash FROM users WHERE email = ?", (email,)).fetchone()
+            if row:
+                return User(row['id'], row['email'], row['password_hash'])
+            return None
+        finally:
+            conn.close()
 
     @staticmethod
     def create(email, password):
         password_hash = generate_password_hash(password)
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_connection()
         try:
             conn.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, password_hash))
             conn.commit()
-        except Exception as e:
-            conn.close()
+        except Exception:
             return None
-        user = User.get_by_email(email)
-        return user
+        finally:
+            conn.close()
+        return User.get_by_email(email)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
