@@ -18,7 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Yayılım Haritası
 function initMap() {
     const mapContainer = document.getElementById('spreadMap');
-    if (! mapContainer || !reportData.mapData) return;
+        if (!mapContainer) return;
+        if (!reportData.mapData || reportData.mapData.length === 0) {
+            mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8">Yayılma noktası bulunamadı</div>';
+            return;
+        }
     
     const map = L.map('spreadMap').setView([39.9334, 32.8597], 3);
     
@@ -50,7 +54,12 @@ function initMap() {
     // Zaman Çizelgesi Grafiği
     function initTimelineChart() {
         const ctx = document.getElementById('timelineChart');
-        if (!ctx || !reportData.timelineData) return;
+            if (!ctx) return;
+            if (!reportData.timelineData || reportData.timelineData.length === 0) {
+                const parent = ctx.parentElement;
+                if (parent) parent.innerHTML = '<div style="padding:20px;color:#94a3b8">Zaman çizelgesi için veri yok</div>';
+                return;
+            }
     
         const labels = reportData.timelineData.map((_, i) => `Nokta ${i + 1}`);
         const data = reportData.timelineData.map(item => item.similarity);
@@ -84,7 +93,12 @@ function initMap() {
     // Ülke Dağılımı Grafiği
     function initCountryChart() {
         const ctx = document.getElementById('countryChart');
-        if (!ctx || !reportData.countryStats) return;
+            if (!ctx) return;
+            if (!reportData.countryStats || Object.keys(reportData.countryStats).length === 0) {
+                const parent = ctx.parentElement;
+                if (parent) parent.innerHTML = '<div style="padding:20px;color:#94a3b8">Ülke dağılımı verisi yok</div>';
+                return;
+            }
     
         const labels = Object.keys(reportData.countryStats);
         const data = Object.values(reportData.countryStats);
@@ -112,7 +126,11 @@ function initMap() {
     // Ağ Grafiği
     function initNetworkGraph() {
         const container = document.getElementById('networkGraph');
-        if (!container || !reportData.networkData) return;
+            if (!container) return;
+            if (!reportData.networkData || !reportData.networkData.nodes || reportData.networkData.nodes.length <= 1) {
+                container.innerHTML = '<div style="padding:20px;color:#94a3b8">Yayılma ağı verisi yok veya yetersiz</div>';
+                return;
+            }
     
         const nodes = new vis.DataSet(reportData.networkData.nodes.map(node => ({
             id: node.id,
