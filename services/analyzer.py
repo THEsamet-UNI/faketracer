@@ -3,11 +3,13 @@ FakeTrace - Ana Analiz Servisi
 URL, Metin ve Görsel analizi yapar
 """
 
+
 import re
 import json
 import hashlib
 from datetime import datetime, timedelta
 import random
+import requests
 
 from models.database import (
     add_content, add_analysis_result, add_spread_point,
