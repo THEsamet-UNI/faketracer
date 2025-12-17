@@ -11,6 +11,7 @@ import os
 from models. database import init_database, get_all_contents
 from services.analyzer import analyze_url, analyze_text, analyze_image, get_analysis_report
 from services.detector import get_detector
+from services.model_manager import download_model, load_torch_model
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
@@ -174,6 +175,26 @@ def api_detect():
     except Exception as e:
         return jsonify({'error':'detection_failed', 'detail': str(e)}), 500
     return jsonify(result)
+
+
+@app.route('/api/download_model', methods=['POST'])
+def api_download_model():
+    """Download a model weights file to server. JSON body: { url, filename, sha256 (optional) }"""
+    data = request.get_json() or {}
+    url = data.get('url')
+    filename = data.get('filename')
+    sha256 = data.get('sha256')
+    if not url or not filename:
+        return jsonify({'error':'missing_params'}), 400
+    dest = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+    ok, msg = download_model(url, dest, expected_sha256=sha256)
+    if not ok:
+        return jsonify({'error':'download_failed', 'detail': msg}), 500
+    # try load if torch available
+    ok2, loaded = load_torch_model(dest)
+    if not ok2:
+        return jsonify({'status':'downloaded', 'path': dest, 'load': 'failed', 'detail': loaded})
+    return jsonify({'status':'downloaded', 'path': dest, 'load':'ok'})
 
 
 # ==================== UYGULAMA BAŞLAT ====================
