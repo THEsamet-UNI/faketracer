@@ -157,23 +157,26 @@ def api_analyze():
 def api_detect():
     """Accepts a multipart file upload (form field 'file') and runs detection."""
     if 'file' not in request.files:
-        return jsonify({'error':'no_file'}), 400
+        return jsonify({'error':'no_file', 'message':'Dosya gönderilmedi. "file" alanı bulunamadı.'}), 400
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error':'empty_filename'}), 400
+        return jsonify({'error':'empty_filename', 'message':'Dosya adı boş.'}), 400
     filename = secure_filename(file.filename)
     save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
         file.save(save_path)
     except Exception as e:
-        return jsonify({'error':'save_failed', 'detail': str(e)}), 500
+        return jsonify({'error':'save_failed', 'message':'Dosya kaydedilemedi.', 'detail': str(e)}), 500
 
     # instantiate detector (no model path by default; uses MockDetector)
     detector = get_detector()
     try:
         result = detector.detect_video(save_path)
     except Exception as e:
-        return jsonify({'error':'detection_failed', 'detail': str(e)}), 500
+        return jsonify({'error':'detection_failed', 'message':'Tespit sırasında hata oluştu.', 'detail': str(e)}), 500
+    # add a Turkish message summary
+    if isinstance(result, dict):
+        result.setdefault('message', 'Tespit tamamlandı.')
     return jsonify(result)
 
 
@@ -185,16 +188,16 @@ def api_download_model():
     filename = data.get('filename')
     sha256 = data.get('sha256')
     if not url or not filename:
-        return jsonify({'error':'missing_params'}), 400
+        return jsonify({'error':'missing_params', 'message':'Eksik parametre: "url" ve "filename" gereklidir.'}), 400
     dest = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
     ok, msg = download_model(url, dest, expected_sha256=sha256)
     if not ok:
-        return jsonify({'error':'download_failed', 'detail': msg}), 500
+        return jsonify({'error':'download_failed', 'message':'Model indirilemedi.', 'detail': msg}), 500
     # try load if torch available
     ok2, loaded = load_torch_model(dest)
     if not ok2:
-        return jsonify({'status':'downloaded', 'path': dest, 'load': 'failed', 'detail': loaded})
-    return jsonify({'status':'downloaded', 'path': dest, 'load':'ok'})
+        return jsonify({'status':'downloaded', 'path': dest, 'load': 'failed', 'message':'Model indirildi fakat yükleme başarısız oldu.', 'detail': loaded})
+    return jsonify({'status':'downloaded', 'path': dest, 'load':'ok', 'message':'Model indirildi ve yüklendi.'})
 
 
 # ==================== UYGULAMA BAŞLAT ====================
