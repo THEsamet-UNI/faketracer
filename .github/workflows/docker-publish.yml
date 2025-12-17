@@ -30,6 +30,13 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          # Repository adını küçük harfe çevir
+          build-args: |
+            REPO_NAME=${{ github.repository }}
+          # Docker tag'ı küçük harfli olarak ayarla
+          outputs: type=image,name=ghcr.io/${{ github.repository }}:latest
 
       - name: Output image URI
         run: |

@@ -29,4 +29,4 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
         run: |
-          railway up --project "$RAILWAY_PROJECT_ID" --environment "${RAILWAY_ENVIRONMENT:-production}" --yes
+          railway up -- --project "$RAILWAY_PROJECT_ID" --environment "${RAILWAY_ENVIRONMENT:-production}" --yes
