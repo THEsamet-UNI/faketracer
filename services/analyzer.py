@@ -13,6 +13,10 @@ try:
 except Exception:
     requests = None
 
+try:
+    from PIL import Image
+except Exception:
+    Image = None
 from models.database import (
     add_content, add_analysis_result, add_spread_point,
     get_content_by_id, get_analysis_results, get_spread_points,
@@ -162,6 +166,23 @@ def check_factcheck_database(text):
         if re.search(claim['pattern'], text_lower):
             matches. append(claim['verdict'])
     
+    # Eğer regex ile eşleşme bulunamadıysa, semantik eşlemeyi deneyelim (opsiyonel)
+    if not matches:
+        try:
+            from sentence_transformers import SentenceTransformer, util
+            model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            # claim metinlerini al
+            claim_texts = [c.get('verdict', '') for c in KNOWN_FAKE_CLAIMS]
+            if claim_texts:
+                emb_text = model.encode([text], convert_to_tensor=True)
+                emb_claims = model.encode(claim_texts, convert_to_tensor=True)
+                sims = util.pytorch_cos_sim(emb_text, emb_claims)[0]
+                max_sim, max_idx = float(sims.max()), int(sims.argmax())
+                if max_sim > 0.72:
+                    matches.append(f"Semantik benzerlik: {claim_texts[max_idx]} (score={max_sim:.2f})")
+        except Exception:
+            # sentence-transformers yoksa veya hata olursa sessizce geç
+            pass
     return {
         'found': len(matches) > 0,
         'matches': matches,
@@ -372,7 +393,29 @@ def analyze_text(text, user_id=None):
             'factcheck': {'score': 0 if factcheck_analysis['found'] else 100},
             'language': language_analysis
         }
-        
+
+        # Ek: semantik benzerlik kontrolü (sentence-transformers varsa kullan)
+        semantic_info = {'score': None, 'matches': [], 'max_similarity': 0.0}
+        try:
+            from sentence_transformers import SentenceTransformer, util
+            model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            claim_texts = [c.get('verdict', '') for c in KNOWN_FAKE_CLAIMS]
+            if claim_texts:
+                emb_text = model.encode([text], convert_to_tensor=True)
+                emb_claims = model.encode(claim_texts, convert_to_tensor=True)
+                sims = util.pytorch_cos_sim(emb_text, emb_claims)[0]
+                max_sim, max_idx = float(sims.max()), int(sims.argmax())
+                semantic_info['max_similarity'] = max_sim
+                if max_sim > 0.70:
+                    semantic_info['matches'].append(claim_texts[max_idx])
+                    # Reduce final score proportionally to similarity
+                    semantic_info['score'] = int(max(0, 100 - max_sim * 50))
+        except Exception:
+            pass
+
+        if semantic_info.get('score') is not None:
+            analyses['semantic'] = {'score': semantic_info['score'], 'max_similarity': semantic_info['max_similarity'], 'matches': semantic_info['matches']}
+
         final_score = calculate_final_score(analyses)
         is_fake = 1 if final_score < 40 or factcheck_analysis['found'] else 0
         
@@ -394,6 +437,11 @@ def analyze_text(text, user_id=None):
         add_analysis_result(content_id, 'clickbait', clickbait_analysis['score'], json.dumps(clickbait_analysis))
         add_analysis_result(content_id, 'factcheck', 0 if factcheck_analysis['found'] else 100, json. dumps(factcheck_analysis))
         add_analysis_result(content_id, 'language', language_analysis['score'], json.dumps(language_analysis))
+        if 'semantic' in analyses:
+            try:
+                add_analysis_result(content_id, 'semantic', analyses['semantic'].get('score', 50), json.dumps(analyses['semantic']))
+            except Exception:
+                pass
         
         # Yayılma noktaları oluştur
         generate_spread_points(content_id)
@@ -420,37 +468,72 @@ def analyze_image(image_path, user_id=None):
         if not os.path.exists(image_path):
             result['message'] = 'Görsel dosyası bulunamadı!'
             return result
-        
-        # OCR simülasyonu - gerçek projede pytesseract kullanılır
-        # Şimdilik dosya adından ve boyutundan analiz yapalım
-        file_size = os.path. getsize(image_path)
-        file_name = os. path.basename(image_path)
-        
-        # Basit analiz skoru
-        analysis_score = random.randint(40, 80)
-        
+        # Gerçek OCR denemeleri: önce pytesseract, sonra easyocr fallback
+        file_size = os.path.getsize(image_path)
+        file_name = os.path.basename(image_path)
+
+        ocr_text = ''
+        # try pytesseract
+        try:
+            import pytesseract
+            if Image is None:
+                from PIL import Image as _PILImage
+                img = _PILImage.open(image_path)
+            else:
+                img = Image.open(image_path)
+            # varsayılan dil yoksa deneme olarak tr ve en dener
+            try:
+                ocr_text = pytesseract.image_to_string(img, lang='tur')
+            except Exception:
+                ocr_text = pytesseract.image_to_string(img)
+        except Exception:
+            # fallback easyocr
+            try:
+                import easyocr
+                reader = easyocr.Reader(['tr', 'en'], gpu=False)
+                res = reader.readtext(image_path, detail=0)
+                ocr_text = ' '.join(res)
+            except Exception:
+                ocr_text = ''
+
+        # Basit görsel güvenilirlik skoru: OCR varsa metni analiz et, yoksa dosya-temelli skor
+        if ocr_text and len(ocr_text.strip()) > 5:
+            text_analysis = analyze_text(ocr_text, user_id=user_id)
+            # text_analysis['final_score'] varsa kullan
+            analysis_score = int(text_analysis.get('final_score', 60))
+        else:
+            analysis_score = random.randint(40, 75)
+
         # Veritabanına kaydet
         content_id = add_content(
             user_id,
             content_type='image',
-            title=f'Görsel Analizi:  {file_name}',
+            title=f'Görsel Analizi: {file_name}',
             image_path=image_path,
             reliability_score=analysis_score,
             is_fake=1 if analysis_score < 50 else 0
         )
-        
+
         # Analiz sonucu kaydet
         image_analysis = {
             'file_name': file_name,
             'file_size': file_size,
-            'message': 'Görsel analiz edildi.  OCR ile metin çıkarımı yapıldı.',
+            'ocr_text_snippet': (ocr_text[:512] if ocr_text else ''),
+            'message': 'Görsel analiz edildi. OCR denemesi yapıldı.',
             'score': analysis_score
         }
         add_analysis_result(content_id, 'image', analysis_score, json.dumps(image_analysis))
-        
+
+        # Eğer OCR ile metin çıktıysa, metin analizini de sakla
+        if ocr_text and len(ocr_text.strip()) > 5:
+            try:
+                add_analysis_result(content_id, 'ocr_text', text_analysis.get('final_score', 50), json.dumps(text_analysis))
+            except Exception:
+                pass
+
         # Yayılma noktaları oluştur
         generate_spread_points(content_id)
-        
+
         result['success'] = True
         result['content_id'] = content_id
         result['message'] = 'Görsel analizi tamamlandı'

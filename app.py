@@ -185,8 +185,15 @@ def api_detect():
     except Exception as e:
         return jsonify({'error':'save_failed', 'message':'Dosya kaydedilemedi.', 'detail': str(e)}), 500
 
-    # instantiate detector (no model path by default; uses MockDetector)
-    detector = get_detector()
+    # instantiate detector (try to use a model file in uploads if present)
+    model_candidates = ['detector.pth', 'detector.pt', 'model.pth', 'model.pt']
+    model_path = None
+    for m in model_candidates:
+        candidate = os.path.join(app.config['UPLOAD_FOLDER'], m)
+        if os.path.exists(candidate):
+            model_path = candidate
+            break
+    detector = get_detector(model_path=model_path)
     try:
         result = detector.detect_video(save_path)
     except Exception as e:

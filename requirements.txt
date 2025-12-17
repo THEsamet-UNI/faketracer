@@ -9,3 +9,7 @@ ffmpeg-python>=0.2.0
 torch>=1.13.0
 rq>=1.10.0
 redis>=4.5.0
+pillow>=9.0.0
+pytesseract>=0.3.10
+easyocr>=1.6.2
+sentence-transformers>=2.2.2
