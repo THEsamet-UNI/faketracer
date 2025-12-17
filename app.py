@@ -18,30 +18,42 @@ from redis import Redis
 from tasks import run_detection
 import traceback
 import datetime
+import sys # Konsol çıktısı için gerekli
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
 app.secret_key = 'faketrace-secret-key-2024'
 
-# Global exception handler to log full tracebacks to a local file for diagnosis
+# =================================================================
+# DÜZELTİLEN KISIM: Hata Yakalayıcı (Loglara Yazdırması İçin)
+# =================================================================
 @app.errorhandler(Exception)
 def handle_exception(e):
-    try:
-        tb = traceback.format_exc()
-    except Exception:
-        tb = str(e)
+    # 1. Hatayı hemen konsola (Railway Loglarına) bas
+    print(f"\n{'='*30}", flush=True)
+    print(f"!!! KRİTİK HATA TESPİT EDİLDİ !!!", flush=True)
+    print(f"Hata Mesajı: {e}", flush=True)
+    print("-" * 20, flush=True)
+    traceback.print_exc(file=sys.stdout) # Hatanın tüm detayını konsola dök
+    print(f"{'='*30}\n", flush=True)
+
+    # 2. Yine de dosyaya kaydetmeye çalış (Eski kodun)
     try:
         log_path = os.path.join(os.path.dirname(__file__), 'error.log')
         with open(log_path, 'a', encoding='utf-8') as f:
+            tb = traceback.format_exc()
             f.write(f"=== {datetime.datetime.utcnow().isoformat()} UTC ===\n")
             f.write(f"Path: {request.path if 'request' in globals() else 'N/A'}\n")
             f.write(tb + "\n\n")
     except Exception:
         pass
-    # In debug mode, re-raise so the interactive debugger can show it
+
+    # Debug modundaysak hatayı tarayıcıda da göster
     if app.debug:
         raise e
+        
     return render_template('index.html', error='Sunucu hatası oluştu. Hata günlüğü kaydedildi.'), 500
+# =================================================================
 
 from auth.routes import auth_bp
 app.register_blueprint(auth_bp)
@@ -53,12 +65,11 @@ try:
     init_database()
 except Exception as e:
     # Print warning but continue; get_connection will raise if DB cannot be used
-    # Use ASCII-only output to avoid console encoding problems in some environments
     print(f"WARNING: Veritabanı başlatılamadı: {e}")
 
 # Upload klasörü ayarları
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
-if not os.path. exists(UPLOAD_FOLDER):
+if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
@@ -93,7 +104,7 @@ def analyze():
     """Analiz işlemini başlat"""
     
     # Hangi analiz türü seçilmiş?
-    analysis_type = request. form.get('analysis_type', 'url')
+    analysis_type = request.form.get('analysis_type', 'url')
     
     result = None
     
@@ -123,10 +134,10 @@ def analyze():
         result = analyze_image(filepath, user_id=user_id)
     
     # Sonuç kontrolü
-    if result and result. get('success'):
+    if result and result.get('success'):
         return redirect(url_for('report', content_id=result['content_id']))
     else:
-        error_msg = result.get('message', 'Analiz sırasında bir hata oluştu! ') if result else 'Bilinmeyen hata!'
+        error_msg = result.get('message', 'Analiz sırasında bir hata oluştu!') if result else 'Bilinmeyen hata!'
         return render_template('index.html', error=error_msg)
 
 
@@ -148,7 +159,7 @@ def debug_report(content_id):
     report_data = get_analysis_report(content_id)
     if not report_data:
         return jsonify({'error': 'report not found'}), 404
-    # Ensure serializable (fallback to str for any non-serializable values)
+    # Ensure serializable
     import json as _json
     try:
         body = _json.dumps(report_data, default=str, ensure_ascii=False)
@@ -191,11 +202,11 @@ def api_analyze():
     analysis_type = data.get('type', 'url')
     
     if analysis_type == 'url':
-        result = analyze_url(data. get('url', ''))
+        result = analyze_url(data.get('url', ''))
     elif analysis_type == 'text':
         result = analyze_text(data.get('text', ''))
     else:
-        return jsonify({'error':  'Geçersiz analiz türü'}), 400
+        return jsonify({'error': 'Geçersiz analiz türü'}), 400
     
     return jsonify(result)
 
