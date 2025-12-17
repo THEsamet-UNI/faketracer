@@ -1,1 +1,5 @@
 Flask
+<<<<<<< HEAD
+=======
+werkzeug
+>>>>>>> ad53ddd (Deploy ayarları: requirements.txt ve Procfile eklendi)

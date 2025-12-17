@@ -133,13 +133,13 @@ def api_analyze():
 # ==================== UYGULAMA BAŞLAT ====================
 
 if __name__ == '__main__':
-    # Veritabanını oluştur
     print("🔧 Veritabanı kontrol ediliyor...")
     init_database()
-    
     print("🚀 FakeTrace başlatılıyor...")
     print("📍 http://127.0.0.1:5000 adresinde çalışıyor")
     print("=" * 50)
-    
-    # Uygulamayı başlat
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+# Vercel için Flask app nesnesi export edilmeli
+else:
+    init_database()
