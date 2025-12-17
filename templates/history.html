@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Geçmiş Analizler - FakeTrace{% endblock %}
+{% block content %}
+    <!-- Ana İçerik -->
+    <main class="history-page">
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-history"></i> Geçmiş Analizler</h1>
+                <p>Daha önce analiz edilen tüm içerikler</p>
+            </div>
+
+            {% if contents and contents|length > 0 %}
+            <div class="history-grid">
+                {% for content in contents %}
+                <div class="history-card {% if content.is_fake %}fake{% else %}safe{% endif %}">
+                    <div class="history-card-header">
+                        <span class="content-type">
+                            {% if content.content_type == 'url' %}
+                                <i class="fas fa-link"></i> URL
+                            {% elif content.content_type == 'text' %}
+                                <i class="fas fa-file-alt"></i> Metin
+                            {% else %}
+                                <i class="fas fa-image"></i> Görsel
+                            {% endif %}
+                        </span>
+                        <span class="score-badge {% if content.reliability_score >= 70 %}success{% elif content.reliability_score >= 40 %}warning{% else %}danger{% endif %}">
+                            {{ content.reliability_score|round|int }}%
+                        </span>
+                    </div>
+                    
+                    <div class="history-card-body">
+                        <h3>{{ content.title[: 60] if content.title else 'Başlık yok' }}{% if content.title and content.title|length > 60 %}...{% endif %}</h3>
+                        <p class="date">
+                            <i class="fas fa-calendar"></i>
+                            {{ content.submitted_at }}
+                        </p>
+                        {% if content.is_fake %}
+                        <span class="verdict-badge danger">
+                            <i class="fas fa-times-circle"></i> Şüpheli İçerik
+                        </span>
+                        {% else %}
+                        <span class="verdict-badge success">
+                            <i class="fas fa-check-circle"></i> Güvenilir
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="history-card-footer">
+                        <a href="/report/{{ content.id }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye"></i> Raporu Gör
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h2>Henüz analiz yapılmamış</h2>
+                <p>İlk analizinizi yapmak için ana sayfaya gidin.</p>
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Yeni Analiz
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+{% endblock %}

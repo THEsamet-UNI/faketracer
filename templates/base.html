@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FakeTrace{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <i class="fas fa-search-location"></i>
+                FakeTrace
+            </a>
+            <ul class="nav-links">
+                <li><a href="/" {% if request.path == '/' %}class="active"{% endif %}>Ana Sayfa</a></li>
+                <li><a href="/history" {% if '/history' in request.path %}class="active"{% endif %}>Geçmiş</a></li>
+                <li><a href="/about" {% if '/about' in request.path %}class="active"{% endif %}>Hakkında</a></li>
+                {% if session.get('user_email') %}
+                    <li><span class="user-email">{{ session['user_email'] }}</span></li>
+                    <li><a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıkış Yap</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}" {% if '/login' in request.path %}class="active"{% endif %}>Giriş Yap</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+    {% block footer %}
+    <footer class="footer">
+        <div class="container">
+            <p>
+                <i class="fas fa-graduation-cap"></i>
+                FakeTrace - Siber Güvenlik Dersi Projesi | Abdulsamet Pülat | 2025
+            </p>
+        </div>
+    </footer>
+    {% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

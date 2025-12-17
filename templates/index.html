@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}FakeTrace - Dezenformasyon Analiz Platformu{% endblock %}
+{% block content %}
+    <!-- Hero Section -->
+    <main class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>
+                    <i class="fas fa-shield-virus"></i>
+                    Dezenformasyonu Analiz Et
+                </h1>
+                <p class="hero-text">
+                    FakeTrace, şüpheli haberleri, sosyal medya paylaşımlarını ve dijital içerikleri 
+                    analiz eden yapay zeka destekli bir platformdur.  Sahte haberleri tespit edin, 
+                    yayılım haritasını görün. 
+                </p>
+
+                <!-- Hata Mesajı -->
+                {% if error %}
+                <div class="error-box">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <!-- Analiz Seçenekleri -->
+                <div class="analysis-tabs">
+                    <button class="tab-btn active" data-tab="url">
+                        <i class="fas fa-link"></i>
+                        URL Analizi
+                    </button>
+                    <button class="tab-btn" data-tab="text">
+                        <i class="fas fa-file-alt"></i>
+                        Metin Analizi
+                    </button>
+                    <button class="tab-btn" data-tab="image">
+                        <i class="fas fa-image"></i>
+                        Görsel Analizi
+                    </button>
+                </div>
+
+                <!-- URL Analiz Formu -->
+                <div class="tab-content active" id="url-tab">
+                    <form action="/analyze" method="POST" class="analyze-form">
+                        <input type="hidden" name="analysis_type" value="url">
+                        <div class="input-group">
+                            <i class="fas fa-globe"></i>
+                            <input 
+                                type="url" 
+                                name="url" 
+                                placeholder="Şüpheli haber URL'sini yapıştırın..."
+                                required
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Analiz Et
+                        </button>
+                    </form>
+                    <p class="help-text">
+                        <i class="fas fa-info-circle"></i>
+                        Örnek:  Bir haber sitesinden kopyaladığınız link
+                    </p>
+                </div>
+
+                <!-- Metin Analiz Formu -->
+                <div class="tab-content" id="text-tab">
+                    <form action="/analyze" method="POST" class="analyze-form">
+                        <input type="hidden" name="analysis_type" value="text">
+                        <div class="textarea-group">
+                            <textarea 
+                                name="text" 
+                                placeholder="Şüpheli metni buraya yapıştırın... 
+
+Örnek: WhatsApp'tan gelen zincir mesaj, sosyal medyada gördüğünüz bir iddia, vs."
+                                rows="6"
+                                required
+                            ></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Metni Analiz Et
+                        </button>
+                    </form>
+                    <p class="help-text">
+                        <i class="fas fa-info-circle"></i>
+                        Instagram, Twitter, WhatsApp'tan kopyaladığınız metinleri analiz edin
+                    </p>
+                </div>
+
+                <!-- Görsel Analiz Formu -->
+                <div class="tab-content" id="image-tab">
+                    <form action="/analyze" method="POST" enctype="multipart/form-data" class="analyze-form">
+                        <input type="hidden" name="analysis_type" value="image">
+                        <div class="file-upload">
+                            <input type="file" name="image" id="imageInput" accept="image/*" required>
+                            <label for="imageInput" class="file-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Ekran görüntüsü yükleyin</span>
+                                <small>PNG, JPG, JPEG (Maks.  16MB)</small>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Görseli Analiz Et
+                        </button>
+                    </form>
+                    <p class="help-text">
+                        <i class="fas fa-info-circle"></i>
+                        Instagram, Twitter gibi platformlardan aldığınız ekran görüntülerini yükleyin
+                    </p>
+                </div>
+            </div>
+
+            <!-- Özellikler -->
+            <div class="features">
+                <div class="feature-card">
+                    <i class="fas fa-check-double"></i>
+                    <h3>Kaynak Doğrulama</h3>
+                    <p>Haber kaynağının güvenilirliğini kontrol eder, bilinen sahte haber sitelerini tespit eder.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-language"></i>
+                    <h3>Dil Analizi</h3>
+                    <p>Clickbait başlıkları, panik söylemleri ve manipülatif dil kullanımını tespit eder.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-database"></i>
+                    <h3>Fact-Check Veritabanı</h3>
+                    <p>Bilinen yanlış iddiaları ve daha önce yalanlanan haberleri kontrol eder.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <h3>Yayılım Haritası</h3>
+                    <p>İçeriğin hangi platformlarda ve ülkelerde yayıldığını görselleştirir. </p>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+{% endblock %}

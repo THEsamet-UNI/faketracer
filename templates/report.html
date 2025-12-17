@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% block title %}Analiz Raporu - FakeTrace{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+{% endblock %}
+{% block content %}
+    <main class="report-page">
+        <div class="container">
+            <div class="report-header">
+                <div class="report-title">
+                    <h1><i class="fas fa-file-alt"></i> Analiz Raporu</h1>
+                    <span class="report-date">{{ report.content.submitted_at }}</span>
+                </div>
+                <div class="main-score {{ report.risk_color }}">
+                    <div class="score-circle">
+                        <span class="score-value">{{ report.content.reliability_score|round|int }}</span>
+                        <span class="score-label">/ 100</span>
+                    </div>
+                    <div class="score-info">
+                        <h2>Güvenilirlik Skoru</h2>
+                        <p class="risk-badge {{ report.risk_color }}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Risk Seviyesi: {{ report.risk_level }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-info-card">
+                <h3><i class="fas fa-info-circle"></i> Analiz Edilen İçerik</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Tür:</span>
+                        <span class="info-value">
+                            {% if report.content.content_type == 'url' %}
+                                <i class="fas fa-link"></i> URL Analizi
+                            {% elif report.content.content_type == 'text' %}
+                                <i class="fas fa-file-alt"></i> Metin Analizi
+                            {% else %}
+                                <i class="fas fa-image"></i> Görsel Analizi
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Başlık:</span>
+                        <span class="info-value">{{ report.content.title or 'Başlık yok' }}</span>
+                    </div>
+                    {% if report.content.original_url %}
+                    <div class="info-item full-width">
+                        <span class="info-label">URL:</span>
+                        <a href="{{ report.content.original_url }}" target="_blank" class="info-link">
+                            {{ report.content.original_url }}
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if report.content.original_text %}
+                    <div class="info-item full-width">
+                        <span class="info-label">Metin Özeti:</span>
+                        <p class="info-text">{{ report.content.original_text[:300] }}...</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="verdict-card {{ report.risk_color }}">
+                {% if report.content.is_fake %}
+                <div class="verdict-icon danger">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="verdict-text">
+                    <h2>⚠️ DİKKAT: Bu İçerik Şüpheli!</h2>
+                    <p>Analizlerimize göre bu içerik güvenilir değil. Paylaşmadan önce farklı kaynaklardan doğrulayın.</p>
+                </div>
+                {% else %}
+                <div class="verdict-icon success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="verdict-text">
+                    <h2>✅ İçerik Görece Güvenilir</h2>
+                    <p>Belirgin bir sahtelik işareti bulunamadı. Yine de dikkatli olun.</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-globe"></i>
+                    <div class="stat-value">{{ report.total_spread }}</div>
+                    <div class="stat-label">Yayılma Noktası</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-flag"></i>
+                    <div class="stat-value">{{ report.country_stats|length }}</div>
+                    <div class="stat-label">Farklı Ülke</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="stat-value">{{ report.content.reliability_score|round|int }}%</div>
+                    <div class="stat-label">Güvenilirlik</div>
+                </div>
+                <div class="stat-card {{ report.risk_color }}">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="stat-value">{{ report.risk_level }}</div>
+                    <div class="stat-label">Risk Seviyesi</div>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <h2><i class="fas fa-microscope"></i> Detaylı Analiz Sonuçları</h2>
+                <div class="analysis-grid">
+                    {% if report.analyses.get('domain') %}
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-globe"></i>
+                            <h3>Kaynak Analizi</h3>
+                            <span class="analysis-score">{{ report.analyses.domain.score|round|int }}/100</span>
+                        </div>
+                        <div class="analysis-body">
+                            <div class="progress-bar">
+                                <div class="progress-fill" data-width="{{ report.analyses.domain.score|e }}" style="width:0%"></div>
+                            </div>
+                            <p>{{ report.analyses.domain.message }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if report.analyses.get('clickbait') %}
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-bullhorn"></i>
+                            <h3>Clickbait Analizi</h3>
+                            <span class="analysis-score {% if report.analyses.clickbait.score > 50 %}danger{% endif %}">
+                                {{ report.analyses.clickbait.score|round|int }}/100
+                            </span>
+                        </div>
+                        <div class="analysis-body">
+                            <div class="progress-bar warning">
+                                <div class="progress-fill" data-width="{{ report.analyses.clickbait.score|e }}" style="width:0%"></div>
+                            </div>
+                            <p>{{ report.analyses.clickbait.message }}</p>
+                            {% if report.analyses.clickbait.found_words %}
+                            <div class="tags">
+                                {% for word in report.analyses.clickbait.found_words %}
+                                <span class="tag warning">{{ word }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if report.analyses.get('factcheck') %}
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-check-double"></i>
+                            <h3>Fact-Check Kontrolü</h3>
+                            <span class="analysis-score {% if report.analyses.factcheck.score < 50 %}danger{% else %}success{% endif %}">
+                                {{ report.analyses.factcheck.score|round|int }}/100
+                            </span>
+                        </div>
+                        <div class="analysis-body">
+                            {% if report.analyses.factcheck.get('matches') and report.analyses.factcheck.matches|length > 0 %}
+                            <div class="alert danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Bilinen yanlış iddia tespit edildi!</strong>
+                            </div>
+                            {% for match in report.analyses.factcheck.matches %}
+                            <p class="fact-match">{{ match }}</p>
+                            {% endfor %}
+                            {% else %}
+                            <p class="success-text">
+                                <i class="fas fa-check"></i>
+                                Bilinen yanlış iddia bulunamadı
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if report.analyses.get('language') %}
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-language"></i>
+                            <h3>Dil Kalitesi</h3>
+                            <span class="analysis-score">{{ report.analyses.language.score|round|int }}/100</span>
+                        </div>
+                        <div class="analysis-body">
+                            <div class="progress-bar">
+                                <div class="progress-fill" data-width="{{ report.analyses.language.score|e }}" style="width:0%"></div>
+                            </div>
+                            {% if report.analyses.language.get('issues') %}
+                            <ul class="issues-list">
+                                {% for issue in report.analyses.language.issues %}
+                                <li><i class="fas fa-exclamation-circle"></i> {{ issue }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                            <div class="check-items">
+                                <span class="check-item {% if report.analyses.language.get('has_source') %}success{% else %}danger{% endif %}">
+                                    <i class="fas fa-{% if report.analyses.language.get('has_source') %}check{% else %}times{% endif %}"></i>
+                                    Kaynak Gösterimi
+                                </span>
+                                <span class="check-item {% if report.analyses.language.get('has_date') %}success{% else %}danger{% endif %}">
+                                    <i class="fas fa-{% if report.analyses.language.get('has_date') %}check{% else %}times{% endif %}"></i>
+                                    Tarih Bilgisi
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="visualization-section">
+                <h2><i class="fas fa-chart-area"></i> Yayılım Görselleştirmesi</h2>
+                <div class="viz-grid">
+                    <div class="viz-card full-width">
+                        <h3><i class="fas fa-map-marked-alt"></i> Yayılım Haritası</h3>
+                        <div id="spreadMap" class="map-container"></div>
+                    </div>
+                    <div class="viz-card">
+                        <h3><i class="fas fa-clock"></i> Zaman Çizelgesi</h3>
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                    <div class="viz-card">
+                        <h3><i class="fas fa-project-diagram"></i> Yayılma Ağı</h3>
+                        <div id="networkGraph"></div>
+                    </div>
+                    <div class="viz-card">
+                        <h3><i class="fas fa-chart-pie"></i> Ülke Dağılımı</h3>
+                        <canvas id="countryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="table-section">
+                <h2><i class="fas fa-list"></i> Tespit Edilen Yayılma Noktaları</h2>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Kaynak</th>
+                                <th>Ülke</th>
+                                <th>Benzerlik</th>
+                                <th>Tespit Zamanı</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for point in report.spread_points %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td><i class="fas fa-share-alt"></i> {{ point.source_name }}</td>
+                                <td><span class="country-badge">{{ point.country_code }}</span></td>
+                                <td>
+                                    <div class="similarity-bar">
+                                        <div class="fill" data-width="{{ point.similarity_score|e }}" style="width:0%"></div>
+                                        <span>{{ point.similarity_score|round(1) }}%</span>
+                                    </div>
+                                </td>
+                                <td>{{ point.found_at }}</td>
+                                <td>
+                                    <a href="{{ point.found_url }}" target="_blank" class="btn btn-sm">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Yeni Analiz
+                </a>
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print"></i> Raporu Yazdır
+                </button>
+            </div>
+        </div>
+    </main>
+{% endblock %}
+{% block footer %}
+    <footer class="footer">
+        <div class="container">
+            <p>
+                <i class="fas fa-graduation-cap"></i>
+                FakeTrace - Siber Güvenlik Dersi Projesi | Abdulsamet Pülat | 2024
+            </p>
+        </div>
+    </footer>
+    <script type="application/json" id="report-data">{{ {'mapData': report.map_data, 'timelineData': report.timeline_data, 'networkData': report.network, 'countryStats': report.country_stats} | tojson | safe }}</script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script src="{{ url_for('static', filename='report.js') }}"></script>
+{% endblock %}
