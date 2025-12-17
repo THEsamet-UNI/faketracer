@@ -4,11 +4,13 @@ Ana uygulama dosyası
 """
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from werkzeug.utils import secure_filename
 import os
 
 # Modüllerimizi import et
 from models. database import init_database, get_all_contents
 from services.analyzer import analyze_url, analyze_text, analyze_image, get_analysis_report
+from services.detector import get_detector
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
@@ -92,6 +94,21 @@ def report(content_id):
     return render_template('report.html', report=report_data)
 
 
+@app.route('/debug/report/<int:content_id>')
+def debug_report(content_id):
+    """Debug route: return the raw JSON of get_analysis_report for inspection."""
+    report_data = get_analysis_report(content_id)
+    if not report_data:
+        return jsonify({'error': 'report not found'}), 404
+    # Ensure serializable (fallback to str for any non-serializable values)
+    import json as _json
+    try:
+        body = _json.dumps(report_data, default=str, ensure_ascii=False)
+        return app.response_class(body, mimetype='application/json')
+    except Exception as e:
+        return jsonify({'error': 'serialization failed', 'detail': str(e)}), 500
+
+
 @app.route('/history')
 @login_required
 def history():
@@ -106,6 +123,11 @@ def history():
 def about():
     """Hakkında sayfası"""
     return render_template('about.html')
+
+
+@app.route('/detect')
+def detect_page():
+    return render_template('detect.html')
 
 
 # ==================== API ENDPOINTS ====================
@@ -127,6 +149,30 @@ def api_analyze():
     else:
         return jsonify({'error':  'Geçersiz analiz türü'}), 400
     
+    return jsonify(result)
+
+
+@app.route('/api/detect', methods=['POST'])
+def api_detect():
+    """Accepts a multipart file upload (form field 'file') and runs detection."""
+    if 'file' not in request.files:
+        return jsonify({'error':'no_file'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error':'empty_filename'}), 400
+    filename = secure_filename(file.filename)
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    try:
+        file.save(save_path)
+    except Exception as e:
+        return jsonify({'error':'save_failed', 'detail': str(e)}), 500
+
+    # instantiate detector (no model path by default; uses MockDetector)
+    detector = get_detector()
+    try:
+        result = detector.detect_video(save_path)
+    except Exception as e:
+        return jsonify({'error':'detection_failed', 'detail': str(e)}), 500
     return jsonify(result)
 
 
