@@ -15,15 +15,26 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
 
-      - name: Login to Railway
+      - name: Railway diagnostics & Login (non-fatal)
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          if [ -z "${RAILWAY_API_KEY}" ]; then
-            echo "Skipping Railway login: RAILWAY_API_KEY not set"
-            exit 0
+          echo "--- Railway CLI diagnostics ---"
+          which railway || true
+          railway --version || true
+          echo "RAILWAY_API_KEY set: ${RAILWAY_API_KEY:+yes}"
+          if [ -n "${RAILWAY_API_KEY}" ]; then
+            echo "RAILWAY_API_KEY length: ${#RAILWAY_API_KEY} (masked)"
+            echo "Key preview: ${RAILWAY_API_KEY:0:4}...${RAILWAY_API_KEY: -4}"
           fi
-          railway login --apiKey "$RAILWAY_API_KEY"
+          echo "RAILWAY_PROJECT_ID set: ${RAILWAY_PROJECT_ID:+yes}"
+          echo "Attempting railway login (will not fail the job)"
+          set +e
+          railway login --apiKey "$RAILWAY_API_KEY" 2>&1 | sed -n '1,200p' || true
+          echo "railway whoami (post-login) output:"
+          railway whoami 2>&1 | sed -n '1,200p' || true
+          set -e
 
       - name: Deploy to Railway
         env:
