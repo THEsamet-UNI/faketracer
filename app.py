@@ -16,10 +16,32 @@ from rq import Queue
 from rq.job import Job
 from redis import Redis
 from tasks import run_detection
+import traceback
+import datetime
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
 app.secret_key = 'faketrace-secret-key-2024'
+
+# Global exception handler to log full tracebacks to a local file for diagnosis
+@app.errorhandler(Exception)
+def handle_exception(e):
+    try:
+        tb = traceback.format_exc()
+    except Exception:
+        tb = str(e)
+    try:
+        log_path = os.path.join(os.path.dirname(__file__), 'error.log')
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(f"=== {datetime.datetime.utcnow().isoformat()} UTC ===\n")
+            f.write(f"Path: {request.path if 'request' in globals() else 'N/A'}\n")
+            f.write(tb + "\n\n")
+    except Exception:
+        pass
+    # In debug mode, re-raise so the interactive debugger can show it
+    if app.debug:
+        raise e
+    return render_template('index.html', error='Sunucu hatası oluştu. Hata günlüğü kaydedildi.'), 500
 
 from auth.routes import auth_bp
 app.register_blueprint(auth_bp)
