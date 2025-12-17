@@ -8,7 +8,10 @@ import json
 import hashlib
 from datetime import datetime, timedelta
 import random
-import requests
+try:
+    import requests
+except Exception:
+    requests = None
 
 from models.database import (
     add_content, add_analysis_result, add_spread_point,
@@ -266,6 +269,9 @@ def analyze_url(url, user_id=None):
     try:
         # URL'den içerik çek
         from bs4 import BeautifulSoup
+        if requests is None:
+            result['message'] = 'Dependency missing: requests not installed.'
+            return result
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
