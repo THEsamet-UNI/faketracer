@@ -280,6 +280,14 @@ def api_download_model():
     return jsonify({'status':'downloaded', 'path': dest, 'load':'ok', 'message':'Model indirildi ve yüklendi.'})
 
 
+# Factory for WSGI servers and tests
+def create_app(test_config: dict = None):
+    """Return the Flask app instance. Accept optional test configuration dict."""
+    if test_config:
+        app.config.update(test_config)
+    return app
+
+
 # ==================== UYGULAMA BAŞLAT ====================
 
 if __name__ == '__main__':

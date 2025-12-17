@@ -6,7 +6,6 @@ on:
 
 jobs:
   deploy:
-    if: ${{ secrets.RAILWAY_API_KEY != '' && secrets.RAILWAY_PROJECT_ID != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,13 +19,22 @@ jobs:
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
         run: |
+          if [ -z "${RAILWAY_API_KEY}" ]; then
+            echo "Skipping Railway login: RAILWAY_API_KEY not set"
+            exit 0
+          fi
           railway login --apiKey "$RAILWAY_API_KEY"
 
       - name: Deploy to Railway
         env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
         run: |
+          if [ -z "${RAILWAY_API_KEY}" ] || [ -z "${RAILWAY_PROJECT_ID}" ]; then
+            echo "Skipping Railway deploy: missing RAILWAY_API_KEY or RAILWAY_PROJECT_ID"
+            exit 0
+          fi
           # Deploy current repo to the specified Railway project/environment
           # Requires repository to be linked or project id provided.
           railway up --project "$RAILWAY_PROJECT_ID" --environment "${RAILWAY_ENVIRONMENT:-production}" --yes

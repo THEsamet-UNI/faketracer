@@ -32,4 +32,5 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:latest
 
       - name: Output image URI
-        run: echo "Image pushed: ghcr.io/${{ github.repository }}:latest"
+        run: |
+          echo "Image pushed: ghcr.io/${{ github.repository }}:latest"
