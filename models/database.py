@@ -87,7 +87,8 @@ def init_database():
     
     conn.commit()
     conn.close()
-    print("✅ Veritabanı hazır!")
+    # Avoid printing non-ASCII characters here to prevent encoding errors on some consoles
+    print("Veritabanı hazır!")
 
 
 def add_content(user_id, content_type, original_url=None, original_text=None, title=None, 

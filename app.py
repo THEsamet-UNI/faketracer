@@ -31,7 +31,8 @@ try:
     init_database()
 except Exception as e:
     # Print warning but continue; get_connection will raise if DB cannot be used
-    print(f"⚠️ Veritabanı başlatılamadı: {e}")
+    # Use ASCII-only output to avoid console encoding problems in some environments
+    print(f"WARNING: Veritabanı başlatılamadı: {e}")
 
 # Upload klasörü ayarları
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -283,11 +284,11 @@ def api_download_model():
 
 if __name__ == '__main__':
     # Veritabanını oluştur
-    print("🔧 Veritabanı kontrol ediliyor...")
+    print("Veritabanı kontrol ediliyor...")
     init_database()
     
-    print("🚀 FakeTrace başlatılıyor...")
-    print("📍 http://127.0.0.1:5000 adresinde çalışıyor")
+    print("FakeTrace başlatılıyor...")
+    print("http://127.0.0.1:5000 adresinde çalışıyor")
     print("=" * 50)
     
     # Uygulamayı başlat
