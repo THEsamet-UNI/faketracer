@@ -7,3 +7,5 @@ opencv-python>=4.6.0
 ffmpeg-python>=0.2.0
 # Optional: PyTorch for real model inference. Install platform-specific wheel if required.
 torch>=1.13.0
+rq>=1.10.0
+redis>=4.5.0

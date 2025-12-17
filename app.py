@@ -12,6 +12,10 @@ from models. database import init_database, get_all_contents
 from services.analyzer import analyze_url, analyze_text, analyze_image, get_analysis_report
 from services.detector import get_detector
 from services.model_manager import download_model, load_torch_model
+from rq import Queue
+from rq.job import Job
+from redis import Redis
+from tasks import run_detection
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
@@ -28,6 +32,10 @@ if not os.path. exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Redis / RQ setup (local defaults; production configurable via env vars)
+redis_conn = Redis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)))
+job_queue = Queue('default', connection=redis_conn)
 
 
 # ==================== SAYFALAR ====================
@@ -178,6 +186,44 @@ def api_detect():
     if isinstance(result, dict):
         result.setdefault('message', 'Tespit tamamlandı.')
     return jsonify(result)
+
+
+@app.route('/api/detect_async', methods=['POST'])
+def api_detect_async():
+    """Save uploaded video and enqueue background detection job. Returns job id."""
+    if 'file' not in request.files:
+        return jsonify({'error':'no_file', 'message':'Dosya gönderilmedi. "file" alanı bulunamadı.'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error':'empty_filename', 'message':'Dosya adı boş.'}), 400
+    filename = secure_filename(file.filename)
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    try:
+        file.save(save_path)
+    except Exception as e:
+        return jsonify({'error':'save_failed', 'message':'Dosya kaydedilemedi.', 'detail': str(e)}), 500
+
+    # enqueue background job
+    model_path = request.form.get('model_path') or None
+    job = job_queue.enqueue(run_detection, save_path, model_path)
+    return jsonify({'job_id': job.get_id(), 'message':'İş kuyruğa eklendi. Durum için /api/job_status/<job_id> kullanın.'})
+
+
+@app.route('/api/job_status/<job_id>')
+def api_job_status(job_id):
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+    except Exception:
+        return jsonify({'error':'not_found', 'message':'İş bulunamadı.'}), 404
+    if job.is_finished:
+        return jsonify({'status':'finished', 'result': job.result})
+    if job.is_queued:
+        return jsonify({'status':'queued'})
+    if job.is_started:
+        return jsonify({'status':'started'})
+    if job.is_failed:
+        return jsonify({'status':'failed', 'exc': str(job.exc_info)})
+    return jsonify({'status':'unknown'})
 
 
 @app.route('/api/download_model', methods=['POST'])
