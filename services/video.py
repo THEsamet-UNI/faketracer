@@ -1,5 +1,14 @@
 import os
-import cv2
+import logging
+
+
+def _import_cv2():
+    try:
+        import cv2
+        return cv2
+    except Exception:
+        return None
+
 
 def extract_frames(video_path, max_frames=64, resize=(224,224)):
     """Extract up to `max_frames` frames from video_path as RGB numpy arrays.
@@ -7,6 +16,10 @@ def extract_frames(video_path, max_frames=64, resize=(224,224)):
     """
     frames = []
     if not os.path.exists(video_path):
+        return frames
+    cv2 = _import_cv2()
+    if cv2 is None:
+        logging.warning('OpenCV (cv2) not installed; extract_frames will return empty list')
         return frames
     cap = cv2.VideoCapture(video_path)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
