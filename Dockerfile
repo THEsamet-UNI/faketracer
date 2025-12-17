@@ -1,26 +1,32 @@
-FROM python:3.11-slim AS base
+FROM python:3.11-slim AS builder
+WORKDIR /tmp
+
+# Build dependencies (only in builder stage)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /tmp/requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel
+# Install into an isolated prefix to copy only runtime files later
+RUN python -m pip install --prefix=/install --no-cache-dir -r /tmp/requirements.txt
+
+FROM python:3.11-slim
 WORKDIR /app
 
-# Install only minimal system deps required at runtime
+# Runtime libs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-FROM base AS builder
-WORKDIR /tmp
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt /tmp/requirements.txt
-RUN python -m pip install --upgrade pip setuptools wheel
-RUN python -m pip wheel --wheel-dir /tmp/wheels -r /tmp/requirements.txt
+# Copy installed Python packages from builder
+COPY --from=builder /install /usr/local
 
-FROM base
-WORKDIR /app
-# Copy wheels built in builder stage
-COPY --from=builder /tmp/wheels /wheels
-RUN python -m pip install --no-cache-dir /wheels/* || python -m pip install --no-cache-dir -r /tmp/requirements.txt
-
-# copy only app sources
+# Copy application source (dockerignore will exclude large files)
 COPY . /app
 
 ENV FLASK_APP=app.py
