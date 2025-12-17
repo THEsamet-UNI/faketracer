@@ -34,8 +34,17 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Redis / RQ setup (local defaults; production configurable via env vars)
-redis_conn = Redis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)))
-job_queue = Queue('default', connection=redis_conn)
+redis_conn = None
+job_queue = None
+try:
+    redis_conn = Redis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)))
+    # test connection
+    redis_conn.ping()
+    job_queue = Queue('default', connection=redis_conn)
+except Exception:
+    # Redis not available — fall back to synchronous mode for detect_async
+    redis_conn = None
+    job_queue = None
 
 
 # ==================== SAYFALAR ====================
@@ -203,14 +212,24 @@ def api_detect_async():
     except Exception as e:
         return jsonify({'error':'save_failed', 'message':'Dosya kaydedilemedi.', 'detail': str(e)}), 500
 
-    # enqueue background job
+    # If RQ is available, enqueue; otherwise run synchronously as a fallback
     model_path = request.form.get('model_path') or None
-    job = job_queue.enqueue(run_detection, save_path, model_path)
-    return jsonify({'job_id': job.get_id(), 'message':'İş kuyruğa eklendi. Durum için /api/job_status/<job_id> kullanın.'})
+    if job_queue is not None:
+        job = job_queue.enqueue(run_detection, save_path, model_path)
+        return jsonify({'job_id': job.get_id(), 'message':'İş kuyruğa eklendi. Durum için /api/job_status/<job_id> kullanın.'})
+    else:
+        # synchronous fallback (may block request)
+        try:
+            result = run_detection(save_path, model_path)
+            return jsonify({'job_id': None, 'message':'Redis bulunamadığı için senkron çalıştırıldı.', 'result': result})
+        except Exception as e:
+            return jsonify({'error':'detection_failed', 'message':'Tespit sırasında hata oluştu.', 'detail': str(e)}), 500
 
 
 @app.route('/api/job_status/<job_id>')
 def api_job_status(job_id):
+    if redis_conn is None:
+        return jsonify({'error':'no_redis', 'message':'Redis bağlantısı yok; işler asenkron kuyruğa eklenmedi.'}), 400
     try:
         job = Job.fetch(job_id, connection=redis_conn)
     except Exception:
