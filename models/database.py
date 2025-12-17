@@ -38,6 +38,18 @@ def init_database():
     conn = get_connection()
     cursor = conn.cursor()
     
+    # ==========================================
+    # EKLENEN KISIM: Users (Kullanıcılar) Tablosu
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Ana içerik tablosu
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contents (
@@ -52,7 +64,8 @@ def init_database():
             submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             status TEXT DEFAULT 'completed',
             reliability_score REAL DEFAULT 0,
-            is_fake INTEGER DEFAULT 0
+            is_fake INTEGER DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
     
@@ -88,7 +101,7 @@ def init_database():
     conn.commit()
     conn.close()
     # Avoid printing non-ASCII characters here to prevent encoding errors on some consoles
-    print("Veritabanı hazır!")
+    print("Veritabanı hazır (Users tablosu dahil)!")
 
 
 def add_content(user_id, content_type, original_url=None, original_text=None, title=None, 
@@ -105,6 +118,7 @@ def add_content(user_id, content_type, original_url=None, original_text=None, ti
     conn.commit()
     conn.close()
     return content_id
+
 def get_contents_by_user_id(user_id):
     """Belirli bir kullanıcıya ait içerikleri getirir"""
     conn = get_connection()
@@ -130,7 +144,7 @@ def add_analysis_result(content_id, analysis_type, score, details):
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor. execute('''
+    cursor.execute('''
         INSERT INTO analysis_results (content_id, analysis_type, score, details)
         VALUES (?, ?, ?, ?)
     ''', (content_id, analysis_type, score, details))
@@ -151,7 +165,7 @@ def add_spread_point(content_id, found_url, source_name=None, country_code=None,
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (content_id, found_url, source_name, country_code, latitude, longitude, similarity_score))
     
-    point_id = cursor. lastrowid
+    point_id = cursor.lastrowid
     conn.commit()
     conn.close()
     
@@ -163,7 +177,7 @@ def get_content_by_id(content_id):
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor. execute('SELECT * FROM contents WHERE id = ? ', (content_id,))
+    cursor.execute('SELECT * FROM contents WHERE id = ? ', (content_id,))
     content = cursor.fetchone()
     
     conn.close()
@@ -173,7 +187,7 @@ def get_content_by_id(content_id):
 def get_analysis_results(content_id):
     """Bir içeriğin analiz sonuçlarını getirir"""
     conn = get_connection()
-    cursor = conn. cursor()
+    cursor = conn.cursor()
     
     cursor.execute('SELECT * FROM analysis_results WHERE content_id = ?', (content_id,))
     results = [dict(row) for row in cursor.fetchall()]
@@ -188,7 +202,7 @@ def get_spread_points(content_id):
     cursor = conn.cursor()
     
     cursor.execute('SELECT * FROM spread_points WHERE content_id = ?  ORDER BY found_at', (content_id,))
-    points = [dict(row) for row in cursor. fetchall()]
+    points = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
     return points
@@ -197,7 +211,7 @@ def get_spread_points(content_id):
 def get_all_contents():
     """Tüm içerikleri getirir"""
     conn = get_connection()
-    cursor = conn. cursor()
+    cursor = conn.cursor()
     
     cursor.execute('SELECT * FROM contents ORDER BY submitted_at DESC')
     contents = [dict(row) for row in cursor.fetchall()]
@@ -219,7 +233,7 @@ def get_all_contents():
 def update_content_score(content_id, reliability_score, is_fake):
     """İçerik skorunu günceller"""
     conn = get_connection()
-    cursor = conn. cursor()
+    cursor = conn.cursor()
     
     cursor.execute('''
         UPDATE contents 
