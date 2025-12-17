@@ -1,0 +1,10 @@
+# Optional heavy ML dependencies - install only when needed (local GPU/CPU inference)
+# Example: pip install -r requirements-optional.txt
+
+# PyTorch (pick CPU/GPU wheel appropriate for your platform)
+torch>=1.13.0
+torchvision>=0.14.0
+
+# OCR / heavy NLP
+easyocr>=1.6.2
+sentence-transformers>=2.2.2
