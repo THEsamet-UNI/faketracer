@@ -1,0 +1,13 @@
+venv
+__pycache__
+uploads
+database
+tests
+.git
+*.pyc
+*.pyo
+*.pyd
+*.db
+env
+ENV
+node_modules

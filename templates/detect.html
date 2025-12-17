@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h2>Deepfake Tespit (Beta)</h2>
+  <p>Bir video dosyası yükleyin (.mp4, .mov). Sunucu modeli yoksa hızlı bir ön kontrol çalıştırılır.</p>
+  <form id="detectForm" enctype="multipart/form-data">
+    <input type="file" name="file" id="fileInput" accept="video/*" />
+    <button type="submit">Tespit Et</button>
+  </form>
+
+  <div id="result" style="margin-top:16px;">
+    <!-- sonuç burada gösterilecek -->
+  </div>
+</div>
+
+<script src="/static/detect.js"></script>
+{% endblock %}
