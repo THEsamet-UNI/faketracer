@@ -46,6 +46,7 @@ Notlar ve uyarılar
 
 - `analyze_text` ve `check_factcheck_database` için opsiyonel `sentence-transformers` entegrasyonu eklenmiştir. İlk kullanımda model indirimi yapacaktır — internet bağlantısı ve biraz zaman gerektirir.
 - `analyze_image` önce `pytesseract` deneyip yoksa `easyocr` ile fallback yapar. `pytesseract` kullanmak için sistemde Tesseract kurulu olmalıdır.
+ - `analyze_image` önce `pytesseract` deneyip yoksa `easyocr` ile fallback yapar. `pytesseract` ve `opencv` ağır paketlerdir ve varsayılan Docker image'da yer almıyor — bunları kullanmak için lokal makinenize veya hedef sunucuya `requirements-optional.txt` içindekileri kurmanız gerekir.
 - `scripts/create_demo_model.py` küçük bir demo model kaydeder. Gerçek derin sahte (deepfake) tespiti için uygun, eğitilmiş bir modele ihtiyaç vardır.
 - PyTorch sürümünüzde `torch.load` güvenlik sınırlamaları (weights_only) olabilir; eğer `torch.load` ile kaydedilmiş model objeleri yüklenmiyorsa, modelin `state_dict()`'ını kullanmak/indirmek veya `torch.serialization.add_safe_globals` yöntemleri düşünülebilir.
 
