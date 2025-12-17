@@ -6,6 +6,7 @@ on:
 
 jobs:
   deploy:
+    if: ${{ secrets.RAILWAY_API_KEY != '' && secrets.RAILWAY_PROJECT_ID != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
