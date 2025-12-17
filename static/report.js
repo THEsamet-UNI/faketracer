@@ -6,12 +6,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof reportData === 'undefined') return;
     
     // Harita oluştur
-    initMap();
-    
-    // Grafikler oluştur
-    initTimelineChart();
-    initCountryChart();
-    initNetworkGraph();
+        // Harita ve grafik kütüphanelerinin yüklü olduğundan emin ol
+        const missingLibs = [];
+        if (typeof L === 'undefined') missingLibs.push('Leaflet (harita)');
+        if (typeof Chart === 'undefined') missingLibs.push('Chart.js (grafikler)');
+        if (typeof vis === 'undefined' && typeof visjs === 'undefined') missingLibs.push('vis-network (ağ grafiği)');
+
+        if (missingLibs.length > 0) {
+            console.error('Eksik kütüphane:', missingLibs.join(', '));
+            const grid = document.querySelector('.viz-grid');
+            if (grid) {
+                grid.innerHTML = `<div style="padding:20px;color:#ef4444;background:rgba(0,0,0,0.4);border-radius:8px">Görselleştirme kütüphaneleri yüklenemedi: ${missingLibs.join(', ')}. Lütfen internet bağlantınızı veya CDN erişimini kontrol edin.</div>`;
+            }
+            return;
+        }
+
+        // Harita oluştur
+        try {
+            initMap(reportData);
+            initTimelineChart(reportData);
+            initCountryChart(reportData);
+            initNetworkGraph(reportData);
+        } catch (err) {
+            console.error('Visualization init error:', err);
+            const grid = document.querySelector('.viz-grid');
+            if (grid) {
+                grid.innerHTML = '<div style="padding:20px;color:#ef4444;background:rgba(0,0,0,0.4);border-radius:8px">Görselleştirme başlatılamadı. Konsolu kontrol edin.</div>';
+            }
+        }
     
 });
 
