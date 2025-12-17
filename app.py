@@ -20,8 +20,8 @@ from history.routes import history_bp
 app.register_blueprint(history_bp)
 
 # Upload klasörü ayarları
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
-if not os.path. exists(UPLOAD_FOLDER):
+UPLOAD_FOLDER = os.path.join('/tmp', 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
