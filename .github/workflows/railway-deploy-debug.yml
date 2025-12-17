@@ -1,0 +1,62 @@
+name: Railway Deploy Debug
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  debug-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
+
+      - name: Show environment diagnostics
+        run: |
+          echo "RAILWAY_API_KEY set: ${RAILWAY_API_KEY:+yes}"
+          if [ -n "${RAILWAY_API_KEY}" ]; then
+            echo "RAILWAY_API_KEY length: ${#RAILWAY_API_KEY} (masked)"
+          fi
+          echo "RAILWAY_PROJECT_ID set: ${RAILWAY_PROJECT_ID:+yes}"
+          env | grep -E 'RAILWAY|GITHUB' || true
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Railway binary diagnostics
+        run: |
+          which railway || true
+          railway --version || true
+          ls -l $(dirname $(which railway || echo /usr/local/bin)) || true
+
+      - name: Attempt Railway login (non-fatal)
+        run: |
+          set -o pipefail
+          if [ -z "${RAILWAY_API_KEY}" ]; then
+            echo "Skipping Railway login: RAILWAY_API_KEY not set"
+            exit 0
+          fi
+          echo "Attempting railway login (masked key shown as first/last 4 chars)"
+          echo "${RAILWAY_API_KEY:0:4}...${RAILWAY_API_KEY: -4}"
+          railway login --apiKey "$RAILWAY_API_KEY" 2>&1 | sed -n '1,200p' || true
+          echo "railway whoami (post-login) output:"
+          railway whoami 2>&1 | sed -n '1,200p' || true
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Attempt railway up (dry-run)
+        run: |
+          if [ -z "${RAILWAY_API_KEY}" ] || [ -z "${RAILWAY_PROJECT_ID}" ]; then
+            echo "Skipping railway up: missing credentials"
+            exit 0
+          fi
+          railway up --project "$RAILWAY_PROJECT_ID" --environment "production" --yes --dry-run 2>&1 | sed -n '1,200p' || true
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
