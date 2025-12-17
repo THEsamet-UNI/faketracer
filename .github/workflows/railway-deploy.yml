@@ -1,0 +1,31 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ feature/deepfake-detector, main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
+
+      - name: Login to Railway
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+        run: |
+          railway login --apiKey "$RAILWAY_API_KEY"
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
+        run: |
+          # Deploy current repo to the specified Railway project/environment
+          # Requires repository to be linked or project id provided.
+          railway up --project "$RAILWAY_PROJECT_ID" --environment "${RAILWAY_ENVIRONMENT:-production}" --yes

@@ -1,21 +1,12 @@
-# Optional (heavy) dependencies for full OCR, CV and model inference
-# Install these only on machines that need to run model inference or OCR
+# Optional heavy ML dependencies - install only when needed (local GPU/CPU inference)
 # Example: pip install -r requirements-optional.txt
 
-# OpenCV and FFmpeg bindings for video/frame handling
-opencv-python>=4.6.0
-ffmpeg-python>=0.2.0
-
-# OCR packages
-pytesseract>=0.3.10
-easyocr>=1.6.2
-
-# Sentence transformers for semantic matching (optional and heavy)
-sentence-transformers>=2.2.2
-
-# PyTorch - install platform-specific wheel instead of default pip wheel where appropriate
+# PyTorch (pick CPU/GPU wheel appropriate for your platform)
 torch>=1.13.0
 torchvision>=0.14.0
 
-# (Optional) other ML tooling
-transformers>=4.0.0
+# OCR / heavy NLP
+easyocr>=1.6.2
+sentence-transformers>=2.2.2
+opencv-python>=4.6.0
+ffmpeg-python>=0.2.0
