@@ -8,3 +8,5 @@ torchvision>=0.14.0
 # OCR / heavy NLP
 easyocr>=1.6.2
 sentence-transformers>=2.2.2
+opencv-python>=4.6.0
+ffmpeg-python>=0.2.0
