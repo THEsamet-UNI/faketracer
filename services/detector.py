@@ -8,6 +8,12 @@ try:
     TORCH_AVAILABLE = True
 except Exception:
     TORCH_AVAILABLE = False
+    
+try:
+    from .model_inference import build_and_load
+    MODEL_INFERENCE_AVAILABLE = True
+except Exception:
+    MODEL_INFERENCE_AVAILABLE = False
 
 
 class MockDetector:
@@ -40,9 +46,28 @@ class Detector:
             self.model = MockDetector()
 
     def _load_model(self, path):
+        # Try several strategies to load the model
         try:
-            # Placeholder: user should replace with actual model loading
-            self.model = torch.load(path, map_location='cpu')
+            # 1) try torch.load (saved whole model)
+            try:
+                loaded = torch.load(path, map_location='cpu')
+                # if loaded is a model instance
+                if hasattr(loaded, 'eval'):
+                    self.model = loaded
+                    return
+            except Exception:
+                pass
+
+            # 2) try build architecture and load state_dict via model_inference
+            if MODEL_INFERENCE_AVAILABLE:
+                ok, res = build_and_load(path, map_location='cpu')
+                if ok:
+                    self.model = res
+                    return
+
+            # 3) try loading as raw object (fallback)
+            loaded = torch.load(path, map_location='cpu')
+            self.model = loaded
         except Exception as e:
             print('Could not load detector model:', e)
             self.model = MockDetector()
