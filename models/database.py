@@ -9,9 +9,25 @@ import os
 # Veritabanı dosyasının yolu
 DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'faketrace.db')
 
+# Ensure the database directory exists so sqlite can create the file there
+DB_DIR = os.path.dirname(DATABASE_PATH)
+if not os.path.exists(DB_DIR):
+    try:
+        os.makedirs(DB_DIR, exist_ok=True)
+    except Exception:
+        # Best-effort: if we cannot create the directory, let sqlite3 raise later
+        pass
+
 
 def get_connection():
     """Veritabanına bağlantı oluşturur"""
+    # Ensure folder exists at connect time (extra safety for deployments)
+    db_dir = os.path.dirname(DATABASE_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+        except Exception:
+            pass
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn

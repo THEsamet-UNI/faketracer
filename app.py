@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 import os
 
 # Modüllerimizi import et
-from models. database import init_database, get_all_contents
+from models.database import init_database, get_all_contents
 from services.analyzer import analyze_url, analyze_text, analyze_image, get_analysis_report
 from services.detector import get_detector
 from services.model_manager import download_model, load_torch_model
@@ -25,6 +25,13 @@ from auth.routes import auth_bp
 app.register_blueprint(auth_bp)
 from history.routes import history_bp
 app.register_blueprint(history_bp)
+
+# Ensure database is initialized on import/startup so Gunicorn workers have the DB ready
+try:
+    init_database()
+except Exception as e:
+    # Print warning but continue; get_connection will raise if DB cannot be used
+    print(f"⚠️ Veritabanı başlatılamadı: {e}")
 
 # Upload klasörü ayarları
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
