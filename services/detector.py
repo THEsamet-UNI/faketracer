@@ -27,9 +27,17 @@ class MockDetector:
 
     def predict_frame(self, frame):
         # frame: HxWx3 RGB numpy array
-        import cv2
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        lv = cv2.Laplacian(gray, cv2.CV_64F).var()
+        # Avoid importing OpenCV at runtime; use lightweight numpy operations
+        try:
+            arr = frame.astype('float32')
+            # convert to grayscale using luminosity method
+            gray = arr[..., 0] * 0.2989 + arr[..., 1] * 0.5870 + arr[..., 2] * 0.1140
+            # approximate high-frequency content by gradient magnitude
+            gx, gy = np.gradient(gray)
+            grad = np.abs(gx) + np.abs(gy)
+            lv = float(grad.var())
+        except Exception:
+            lv = 0.0
         # normalize into 0-1 range heuristically
         score = 1.0 - (1.0 / (1.0 + lv / 100.0))
         # convert to 0-100
