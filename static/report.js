@@ -48,13 +48,24 @@ function initMap() {
                     return;
                 }
 
-                // Harita oluştur
-                initMap(reportData);
+                // Ensure visualization section is visible (prevent accidental hiding)
+                const vizSection = document.querySelector('.visualization-section');
+                if (vizSection) vizSection.style.display = '';
 
-                // Grafikler oluştur
-                initTimelineChart(reportData);
-                initCountryChart(reportData);
-                initNetworkGraph(reportData);
+                // Harita oluştur
+                try {
+                    initMap(reportData);
+                    initTimelineChart(reportData);
+                    initCountryChart(reportData);
+                    initNetworkGraph(reportData);
+                } catch (err) {
+                    console.error('Visualization init error:', err);
+                    // show user-visible diagnostic
+                    const grid = document.querySelector('.viz-grid');
+                    if (grid) {
+                        grid.innerHTML = '<div style="padding:20px;color:#ef4444;background:rgba(0,0,0,0.4);border-radius:8px">Görselleştirme başlatılamadı. Konsolu kontrol edin.</div>';
+                    }
+                }
             });
 
             // Yayılım Haritası
